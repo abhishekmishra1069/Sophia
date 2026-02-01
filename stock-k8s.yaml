@@ -1,0 +1,86 @@
+# 1. Database Service & Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres-db
+spec:
+  selector:
+    matchLabels:
+      app: db
+  template:
+    metadata:
+      labels:
+        app: db
+    spec:
+      containers:
+      - name: postgres
+        image: postgres:15
+        env:
+        - name: POSTGRES_PASSWORD
+          value: "pass"
+        - name: POSTGRES_DB
+          value: "stockdb"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-db  # This matches the DB_HOST in your logic code
+spec:
+  selector:
+    app: db
+  ports:
+    - port: 5432
+---
+# 2. Logic Service & Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: logic-deployment
+spec:
+  selector:
+    matchLabels:
+      app: logic
+  template:
+    metadata:
+      labels:
+        app: logic
+    spec:
+      containers:
+      - name: logic-api
+        image: localhost/my-stock-logic:v1
+        imagePullPolicy: Never # Crucial: Tells K8s to use the loaded image
+        env:
+        - name: DB_HOST
+          value: "postgres-db"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: logic-service # This matches the LOGIC_URL in your UI code
+spec:
+  selector:
+    app: logic
+  ports:
+    - port: 5001
+---
+# 3. UI Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ui-deployment
+spec:
+  selector:
+    matchLabels:
+      app: ui
+  template:
+    metadata:
+      labels:
+        app: ui
+    spec:
+      containers:
+      - name: ui-web
+        image: localhost/my-stock-ui:v1
+        imagePullPolicy: Never
+        env:
+        - name: LOGIC_URL
+          value: "http://logic-service:5001"

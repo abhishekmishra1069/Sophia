@@ -1,0 +1,35 @@
+services:
+  postgres-db:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: stockdb
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: pass
+    volumes:
+      - ./db-init:/docker-entrypoint-initdb.d
+    networks:
+      - stock-net
+
+  logic-service:
+    build: ./logic-service
+    environment:
+      DB_HOST: postgres-db
+    depends_on:
+      - postgres-db
+    networks:
+      - stock-net
+
+  ui-service:
+    build: ./ui-service
+    ports:
+      - "8080:5000"
+    environment:
+      LOGIC_URL: http://logic-service:5001
+    depends_on:
+      - logic-service
+    networks:
+      - stock-net
+
+networks:
+  stock-net:
+    driver: bridge
